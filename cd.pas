@@ -41,7 +41,7 @@ begin
     end;
 end;
 
-procedure ErrScreen;
+procedure ErrScreen();
 begin
     clrscr;
     GotoXY(
@@ -51,6 +51,33 @@ begin
     delay(3000);
     clrscr;
     halt(1);
+end;
+
+procedure IntroScreen();
+var
+    i: integer;
+    s: string;
+begin
+    clrscr;
+    GotoXY((ScreenWidth - 10) div 2, ScreenHeight div 2);
+    s := 'Car Dealer';
+    for i := 1 to length(s) do
+    begin
+        write(s[i]);
+        delay(100);
+    end;
+    delay(1000);
+    clrscr;
+end;
+
+procedure ByeScreen();
+begin
+    clrscr;
+    GotoXY((ScreenWidth - 3) div 2, ScreenHeight div 2);
+    write('Bye');
+    delay(750);
+    clrscr;
+    halt(0);
 end;
 
 function fStI(s: string): longint; { from String to Integer } 
@@ -213,6 +240,40 @@ begin
     ParseCars(c);
 end;
 
+procedure ShowMap(m: map);
+var
+    i, j: integer;
+begin
+    for i := 1 to m.h do
+    begin
+    GotoXY(m.x, m.y);
+        write('|'); { default }
+        for j := 2 to m.w-1 do
+            write(' ');
+        write('|');
+
+        if i = 1 then { top }
+        begin
+            GotoXY(m.x, m.y);
+            write(' ');
+            for j := 2 to m.w-1 do
+                write('_');
+            write(' ');
+        end;
+
+        if i = m.h then { bottom }
+        begin 
+            GotoXY(m.x, m.y);
+            write(' ');
+            for j := 2 to m.w-1 do
+                write('-');
+            write(' '); 
+        end;
+
+        m.y += 1;
+    end;
+end;
+
 function IsCar(c: cars; idx: integer): boolean; 
 begin
     if idx = 0 then
@@ -285,68 +346,6 @@ begin
         c := c^.next;
     end;
     SumCars := sum;
-end;
-
-procedure ShowMap(m: map);
-var
-    i, j: integer;
-begin
-    for i := 1 to m.h do
-    begin
-    GotoXY(m.x, m.y);
-        write('|'); { default }
-        for j := 2 to m.w-1 do
-            write(' ');
-        write('|');
-
-        if i = 1 then { top }
-        begin
-            GotoXY(m.x, m.y);
-            write(' ');
-            for j := 2 to m.w-1 do
-                write('_');
-            write(' ');
-        end;
-
-        if i = m.h then { bottom }
-        begin 
-            GotoXY(m.x, m.y);
-            write(' ');
-            for j := 2 to m.w-1 do
-                write('-');
-            write(' '); 
-        end;
-
-        m.y += 1;
-    end;
-end;
-
-procedure IntroScreen(m: map);
-var
-    i: integer;
-    s: string;
-begin
-    clrscr;
-    ShowMap(m);
-    GotoXY((ScreenWidth - 10) div 2, ScreenHeight div 2);
-    s := 'Car Dealer';
-    for i := 1 to length(s) do
-    begin
-        write(s[i]);
-        delay(100);
-    end;
-    delay(1000);
-    clrscr;
-end;
-
-procedure ByeScreen;
-begin
-    clrscr;
-    GotoXY((ScreenWidth - 3) div 2, ScreenHeight div 2);
-    write('Bye');
-    delay(750);
-    clrscr;
-    halt(0);
 end;
 
 procedure DrawMainMenu(m: map);
@@ -543,9 +542,9 @@ var
 begin
     clrscr;
     ScreenCheck;
+    IntroScreen;
     randomize;
     Init(m, p, c);
-    IntroScreen(m);
     while true do
     begin
         DrawMainMenu(m);
