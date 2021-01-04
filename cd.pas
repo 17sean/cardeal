@@ -1,7 +1,8 @@
 program CarDealer;
 uses crt;
 const
-    ProfileFile = 'profile.txt';
+    ProfileFileName = 'profile.txt';
+    CarsFileName = 'cars.txt';
 type
     map = record
         w, h, x, y: integer;
@@ -31,6 +32,18 @@ begin
     end;
 end;
 
+procedure ErrScreen;
+begin
+    clrscr;
+    GotoXY(
+        (ScreenWidth - length('Error. Exiting...')) div 2,
+        ScreenHeight div 2);
+    write(ErrOutput, 'Error. Exiting...');
+    delay(3000);
+    clrscr;
+    halt(1);
+end;
+
 function fStI(s: string): longint; { from String to Integer } 
 var
     i: integer;
@@ -46,14 +59,82 @@ begin
     fStI := res;
 end;
 
-procedure CreateProfile(var p: profile);
+function StringShorter(s: string; pos: integer): string;
+var
+    tmp: string;
+    i: integer;
 begin
+    tmp := '';
+    for i := pos to length(s) do
+        tmp += s[i];
+    StringShorter := tmp;
+end;
 
+function ParserShorter(s: string): string;
+var
+    pos: integer;
+begin
+    pos := 1;
+    while s[pos] <> ':' do
+        pos += 1;
+    ParserShorter := StringShorter(s, pos+1);
+end;
+
+function DFE(dir: string): boolean; { Does file exist? }
+var
+    f: file;
+begin
+    assign(f, dir);
+    {$I-}
+    reset(f);
+    if IOresult = 0 then
+    begin
+        DFE := true;
+        close(f);
+        {$I+}
+        exit;
+    end
+    else
+        DFE := false;
+    {$I+}
+end;
+
+procedure CreateProfile(var p: profile);
+var
+    f: text;
+    i: integer;
+begin
+    assign(f, ProfileFileName);
+    rewrite(f);
+
+    writeln(f, '10000'); { Give money }
+    writeln(f, '1'); { Give first car }
+    for i := 1 to 4 do { Init other cars  }
+    begin
+        if i <> 4 then
+            writeln(f, '0')
+        else
+            write(f, '0');
+    end;
+    close(f);
 end;
 
 procedure RewriteProfile(p: profile);
+var
+    f: text;
+    i: integer;
 begin
-
+    assign(f, ProfileFileName);
+    rewrite(f);
+    writeln(f, p.m);
+    for i := 1 to 5 do
+    begin
+        if i <> 5 then
+            writeln(f, p.c[i])
+        else
+            write(f, p.c[i]);
+    end;
+    close(f);
 end;
 
 procedure ParseProfile(var p: profile);
@@ -62,22 +143,11 @@ var
     s: string;
     count: integer;
 begin
-    assign(f, ProfileFile);
-    {$I-}
+    assign(f, ProfileFileName);
+    if not DFE(ProfileFileName) then
+        CreateProfile(p);
     reset(f);
-    if IOresult <> 0 then
-    begin
-        CreateProfile(p);
-        exit;
-    end;
-    {$I+}
     readln(f, s);
-    if s = '' then
-    begin
-        CreateProfile(p);
-        exit;
-    end;
-
     p.m := fStI(s); { parse money }
     count := 1;
     while true do { parse cars } 
@@ -88,12 +158,47 @@ begin
         p.c[count] := fStI(s);
         count += 1;
     end;
+    close(f);
 end;
 
+{ todo }
 
-procedure ParseCars();
+procedure ParseCars(var c: cars);
+var
+    f: text;
+    s: string;
+    tmp: cars;
 begin
+    if not DFE(CarsFileName) then
+        ErrScreen;
+
+    c := nil; { Initialization } 
+    assign(f, CarsFileName);
+    reset(f);
+
+    while not EOF(f) do
+    begin
+        readln(f, s);
+        case s[1] of
+            '~':
+            begin
+                new(tmp);
+                tmp^.next := c;
+            end;
+            ';': c := tmp;
+
+            'I': tmp^.idx := fStI(ParserShorter(s));
+            'B': tmp^.brand := ParserShorter(s);
+            'M': tmp^.model := ParserShorter(s);
+            'L': tmp^.lux := fStI(ParserShorter(s));
+            'P': tmp^.price := fStI(ParserShorter(s));
+        end;
+    end;
+
+    close(f);
 end;
+
+{ /todo }
 
 procedure Init(var m: map; var p: profile; var c: cars);
 begin
@@ -102,6 +207,7 @@ begin
     m.x := (ScreenWidth - m.w) div 2;
     m.y := (ScreenHeight - m.h) div 2;
     ParseProfile(p);
+    ParseCars(c);
 end;
 
 function IsCar(c: cars; idx: integer): boolean; 
@@ -227,18 +333,6 @@ begin
     halt(0);
 end;
 
-procedure ErrMenu;
-begin
-    clrscr;
-    GotoXY(
-        (ScreenWidth - length('Error. Exiting...')) div 2,
-        ScreenHeight div 2);
-    write(ErrOutPut, 'Error. Exiting...');
-    delay(3000);
-    clrscr;
-    halt(1);
-end;
-
 procedure DrawMainMenu(m: map);
 var
     x, y: integer;
@@ -308,6 +402,8 @@ begin
         ByeScreen;
 end;
 
+{ todo }
+
 procedure DrawTradeMenu(m: map);
 begin
     clrscr;
@@ -341,7 +437,7 @@ begin
             '2': TradeMenu(m, p, c);
             #27: ByeScreen;
             else
-                ErrMenu;
+                ErrScreen;
         end;
     end;
 end.

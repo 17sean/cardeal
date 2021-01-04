@@ -1,4 +1,0 @@
-B:Volkswagen
-M:Golf 3
-L:1
-P:40000
