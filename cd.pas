@@ -15,10 +15,19 @@ type
 
     cars = ^gamecar;
     gamecar = record
-        idx, lux, price: integer;
+        idx, lux: integer;
+        price: longint;
         brand, model: string;
         next: cars;
     end;
+
+    gametradeelement = record
+        car, idx: integer;
+        price: longint;
+    end;
+    gametradelist = array [1..5] of gametradeelement;
+
+    binstatus = (a, b);
 
 procedure ScreenCheck();
 begin
@@ -161,8 +170,6 @@ begin
     close(f);
 end;
 
-{ todo }
-
 procedure ParseCars(var c: cars);
 var
     f: text;
@@ -175,7 +182,6 @@ begin
     c := nil; { Initialization } 
     assign(f, CarsFileName);
     reset(f);
-
     while not EOF(f) do
     begin
         readln(f, s);
@@ -194,11 +200,8 @@ begin
             'P': tmp^.price := fStI(ParserShorter(s));
         end;
     end;
-
     close(f);
 end;
-
-{ /todo }
 
 procedure Init(var m: map; var p: profile; var c: cars);
 begin
@@ -258,7 +261,7 @@ begin
     HaveCars := false;
 end;
 
-function SumCars(p: profile; c: cars): integer;
+function PSumCars(p: profile; c: cars): integer;
 var
     i, sum: integer;
 begin
@@ -267,6 +270,19 @@ begin
     begin
         if IsCar(c, p.c[i]) then
             sum += 1;
+    end;
+    PSumCars := sum;
+end;
+
+function SumCars(c: cars): integer;
+var
+    sum: integer;
+begin
+    sum := 0;
+    while c <> nil do
+    begin
+        sum += 1;
+        c := c^.next;
     end;
     SumCars := sum;
 end;
@@ -375,7 +391,7 @@ begin
 
     if HaveCars(p, c) then
     begin
-        for i := 1 to SumCars(p, c) do
+        for i := 1 to PSumCars(p, c) do
         begin
             y += 1;
             tmpcar := SearchByIdx(c, p.c[i]);
@@ -402,19 +418,123 @@ begin
         ByeScreen;
 end;
 
-{ todo }
-
-procedure DrawTradeMenu(m: map);
+function FindProfileLux(p: profile): integer;
 begin
-    clrscr;
+    case p.m of
+        0..50000: FindProfileLux := 1;
+        50001..100000: FindProfileLux := 2;
+        100001..250000: FindProfileLux := 3;
+        250001..500000: FindProfileLux := 4;
+        500001..1000000: FindProfileLux := 5;
+    end;
 end;
 
-procedure TradeMenu(m: map; var p: profile; c: cars);
+function FindLuxExtra(lux: integer): longint;
 begin
-    DrawTradeMenu(m);
+    case lux of
+        1: FindLuxExtra := 6000;
+        2: FindLuxExtra := 15000;
+        3: FindLuxExtra := 35000;
+        4: FindLuxExtra := 70000;
+        5: FindLuxExtra := 250000;
+    end;
+end;
+
+function RandTradeList(p: profile; c: cars): gametradelist;
+var
+    i, sum, plux, status: integer;
+    extra: longint;
+    tmp: gametradelist;
+    tmpcar: gamecar;
+begin
+    plux := FindProfileLux(p);
+    sum := SumCars(c);
+    for i := 1 to 5 do
+    begin
+        tmp[i].idx := i;
+        repeat
+        tmp[i].car := random(sum)+1;
+        tmpcar := SearchByIdx(c, tmp[i].car);
+        until tmpcar.lux <= plux;
+        extra := FindLuxExtra(tmpcar.lux);
+        status := random(2);
+        case status of
+            0: tmp[i].price := tmpcar.price + random(extra)+1;
+            1: tmp[i].price := tmpcar.price - random(extra)+1;
+        end;
+        tmp[i].price := tmp[i].price div 1000 * 1000;
+    end;
+    RandTradeList := tmp;
+end;
+
+procedure DrawTradeMenu(
+                        m: map;
+                        c: cars;
+                        tradelist: gametradelist;
+                        status: binstatus);
+var
+    x, y, i: integer;
+    tmpcar: gamecar;
+begin
+    clrscr;
+    ShowMap(m);
+    x := (ScreenWidth - length('Market')) div 2;
+    y := (ScreenHeight - 15) div 2;
+    GotoXY(x, y);
+    write('Market');
+
+    y += 3;
+    GotoXY(x, y);
+    write('Offers');
+
+    y += 1;
+    x -= 10;
+    for i := 1 to 5 do
+    begin
+        tmpcar := SearchByIdx(c, tradelist[i].car);
+        y += 1;
+        GotoXY(x, y);
+        write(
+            tradelist[i].idx, '. ',
+            tmpcar.brand, ' ',
+            tmpcar.model, ' ',
+            tradelist[i].price);
+    end;
+
+    y += 2;
+    x := (ScreenWidth - length('Enter car`s number')) div 2;
+    case status of 
+        a:
+        begin
+            GotoXY(x, y);
+            write('Enter car`s number');
+        end;
+        b:
+        begin
+            GotoXY(x, y);
+            write('Press b/s buy/sell');
+        end;
+    end;
+end;
+
+{ todo }
+
+procedure TradeMenu(m: map; var p: profile; c: cars);
+var
+    tradelist: gametradelist;
+begin
+    tradelist := RandTradeList(p, c);
+    DrawTradeMenu(m, c, tradelist, a);
+    
+    delay(1000);
+
+    DrawTradeMenu(m, c, tradelist, b);
+
+    delay(1000);
 end;
 
 { /todo}
+
 var
     m: map;
     p: profile;
