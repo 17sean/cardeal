@@ -27,8 +27,6 @@ type
     end;
     gametradelist = array [1..5] of gametradeelement;
 
-    binstatus = (a, b);
-
 procedure ScreenCheck();
 begin
     if (ScreenWidth < 45) or (ScreenHeight < 18) then
@@ -372,22 +370,29 @@ procedure DrawProfileMenu(m: map; p: profile; c: cars);
 var
     i, x, y: integer;
     tmpcar: gamecar;
+    s: string;
 begin
     clrscr;
     ShowMap(m);
-    x := (ScreenWidth - 15) div 2;
-    y := (ScreenHeight - 10) div 2;
+    x := (ScreenWidth - 7) div 2;
+    y := (ScreenHeight - 14) div 2;
     GotoXY(x, y);
-    write('Your Profile:');
+    write('Profile');
 
-    y += 2;
+    str(p.m, s);
+    x := (ScreenWidth - (length('Money: ') + length(s))) div 2;
+    y += 3;
     GotoXY(x, y);
     write('Money: ', p.m);
     
-    y += 1;
-    GotoXY(x, y);
-    write('Your cars:');
 
+    x := (ScreenWidth - 7) div 2;
+    y += 2;
+    GotoXY(x, y);
+    write('Garage:');
+
+    x -= 3;
+    y += 1;
     if HaveCars(p, c) then
     begin
         for i := 1 to PSumCars(p, c) do
@@ -399,9 +404,10 @@ begin
         end; 
     end;
 
-    y += 2;
     x -= 1;
+    y += 2;
     GotoXY(x, y);
+    write('press q to quit');
 end;
 
 procedure ProfileMenu(m: map; p: profile; c: cars);
@@ -409,7 +415,6 @@ var
     ch: char;
 begin
     DrawProfileMenu(m, p, c);
-    write('press q to quit');
     repeat
         ch := ReadKey;
     until ch in ['q', 'Q', #27];
@@ -441,7 +446,8 @@ end;
 
 function RandTradeList(p: profile; c: cars): gametradelist;
 var
-    i, sum, plux, status: integer;
+    i, sum, plux: integer;
+    status: shortint;
     extra: longint;
     tmp: gametradelist;
     tmpcar: gamecar;
@@ -470,7 +476,7 @@ procedure DrawTradeMenu(
                         m: map;
                         c: cars;
                         tradelist: gametradelist;
-                        status: binstatus);
+                        status: shortint);
 var
     x, y, i: integer;
     tmpcar: gamecar;
@@ -478,7 +484,7 @@ begin
     clrscr;
     ShowMap(m);
     x := (ScreenWidth - length('Market')) div 2;
-    y := (ScreenHeight - 15) div 2;
+    y := (ScreenHeight - 14) div 2;
     GotoXY(x, y);
     write('Market');
 
@@ -486,8 +492,8 @@ begin
     GotoXY(x, y);
     write('Offers');
 
+    x -= 8;
     y += 1;
-    x -= 10;
     for i := 1 to 5 do
     begin
         tmpcar := SearchByIdx(c, tradelist[i].car);
@@ -500,19 +506,12 @@ begin
             tradelist[i].price);
     end;
 
-    y += 2;
     x := (ScreenWidth - length('Enter car`s number')) div 2;
+    y += 2;
+    GotoXY(x, y);
     case status of 
-        a:
-        begin
-            GotoXY(x, y);
-            write('Enter car`s number');
-        end;
-        b:
-        begin
-            GotoXY(x, y);
-            write('Press b/s buy/sell');
-        end;
+        0: write('Enter car`s number');
+        1: write('Press b/s buy/sell');
     end;
 end;
 
@@ -523,11 +522,11 @@ var
     tradelist: gametradelist;
 begin
     tradelist := RandTradeList(p, c);
-    DrawTradeMenu(m, c, tradelist, a);
+    DrawTradeMenu(m, c, tradelist, 0);
     
     delay(1000);
 
-    DrawTradeMenu(m, c, tradelist, b);
+    DrawTradeMenu(m, c, tradelist, 1);
 
     delay(1000);
 end;
