@@ -21,11 +21,11 @@ type
         next: cars;
     end;
 
-    gametradeelement = record
-        car, idx: integer;
+    tradelistelement = record
+        idx: integer;
         price: longint;
     end;
-    gametradelist = array [1..5] of gametradeelement;
+    tradelist = array [1..5] of tradelistelement;
 
 procedure ScreenCheck();
 begin
@@ -78,7 +78,7 @@ begin
     halt(0);
 end;
 
-function fStI(s: string): longint; { from String to Integer } 
+function SrI(s: string): longint; { String returns Integer } 
 var
     i: integer;
     res: longint;
@@ -90,7 +90,76 @@ begin
         res *= 10;
         res += ord(s[i]) - ord('0');
     end;
-    fStI := res;
+    SrI := res;
+end;
+
+function IrS(i: longint): string; { Integer returns string }
+type
+    pIntEl = ^IntEl;
+    IntEl = record
+        data: char;
+        next: pIntEl;
+    end;
+var
+    p, tmp: pIntEl;
+    s: string;
+    j: longint;
+begin
+    if i = 0 then
+    begin
+        IrS := '0';
+        exit;
+    end;
+
+    p := nil;
+    s := ''; 
+    j := i;
+    if i < 0 then
+        i := -i;
+    while i <> 0 do 
+    begin
+        new(tmp);
+        if (i mod 10) <> 0 then
+            tmp^.data := chr(ord(i mod 10) + ord('0'))
+        else
+            tmp^.data := '0';
+        i := i div 10;
+        tmp^.next := p;
+        p := tmp;
+    end;
+    if j < 0 then
+        s += '-';
+    while tmp <> nil do
+    begin
+        s += tmp^.data;
+        tmp := tmp^.next;
+    end;
+    while p <> nil do
+    begin
+        tmp := p;
+        p := p^.next;
+        dispose(tmp);
+    end;
+    IrS := s;
+end;
+
+function DFE(dir: string): boolean; { Does file exist? }
+var
+    f: file;
+begin
+    assign(f, dir);
+    {$I-}
+    reset(f);
+    if IOresult = 0 then
+    begin
+        DFE := true;
+        close(f);
+        {$I+}
+        exit;
+    end
+    else
+        DFE := false;
+    {$I+}
 end;
 
 function StringShorter(s: string; pos: integer): string;
@@ -114,41 +183,26 @@ begin
     ParserShorter := StringShorter(s, pos+1);
 end;
 
-function DFE(dir: string): boolean; { Does file exist? }
-var
-    f: file;
-begin
-    assign(f, dir);
-    {$I-}
-    reset(f);
-    if IOresult = 0 then
-    begin
-        DFE := true;
-        close(f);
-        {$I+}
-        exit;
-    end
-    else
-        DFE := false;
-    {$I+}
-end;
-
-procedure CreateProfile(var p: profile);
+procedure CreateProfile();
 var
     f: text;
-    i: integer;
+    defmoney: longint; { Default money }
+    defcar: integer;   { Default car }
+    count: integer;
 begin
+    defmoney := 15000;
+    defcar := 1;
     assign(f, ProfileFileName);
     rewrite(f);
-
-    writeln(f, '10000'); { Give money }
-    writeln(f, '1'); { Give first car }
-    for i := 1 to 4 do { Init other cars  }
+    count := 1;
+    while count <> 7 do
     begin
-        if i <> 4 then
-            writeln(f, '0')
-        else
-            write(f, '0');
+        case count of
+            1: writeln(f, 'M:' + IrS(defmoney)); { Money }
+            2: writeln(f, IrS(count-1) + ':' + IrS(defcar)); { start car }
+            3..6: writeln(f, IrS(count-1) + ':' + IrS(0)); { no cars }
+        end;
+        count += 1;
     end;
     close(f);
 end;
@@ -156,17 +210,19 @@ end;
 procedure RewriteProfile(p: profile);
 var
     f: text;
-    i: integer;
+    count: integer;
 begin
     assign(f, ProfileFileName);
     rewrite(f);
-    writeln(f, p.m);
-    for i := 1 to 5 do
+    count := 1;
+    while count <> 7 do
     begin
-        if i <> 5 then
-            writeln(f, p.c[i])
-        else
-            write(f, p.c[i]);
+        case count of
+            1: writeln(f, 'M:' + IrS(p.m)); { Money }
+            2..6: writeln(f, IrS(count-1) +
+                                    ':' + IrS(p.c[count-1])); { Cars }
+        end;
+        count += 1;
     end;
     close(f);
 end;
@@ -175,22 +231,19 @@ procedure ParseProfile(var p: profile);
 var
     f: text;
     s: string;
-    count: integer;
 begin
-    assign(f, ProfileFileName);
     if not DFE(ProfileFileName) then
-        CreateProfile(p);
+        CreateProfile;
+
+    assign(f, ProfileFileName);
     reset(f);
-    readln(f, s);
-    p.m := fStI(s); { parse money }
-    count := 1;
-    while true do { parse cars } 
+    while not EOF(f) do
     begin
         readln(f, s);
-        if s = '' then
-            break;
-        p.c[count] := fStI(s);
-        count += 1;
+        case s[1] of
+            'M': p.m := SrI(ParserShorter(s)); { Money }
+            '1'..'5': p.c[SrI(s[1])] := SrI(ParserShorter(s)); { Cars }
+        end;
     end;
     close(f);
 end;
@@ -204,7 +257,7 @@ begin
     if not DFE(CarsFileName) then
         ErrScreen;
 
-    c := nil; { Initialization } 
+    c := nil;
     assign(f, CarsFileName);
     reset(f);
     while not EOF(f) do
@@ -218,11 +271,11 @@ begin
             end;
             ';': c := tmp;
 
-            'I': tmp^.idx := fStI(ParserShorter(s));
+            'I': tmp^.idx := SrI(ParserShorter(s));
             'B': tmp^.brand := ParserShorter(s);
             'M': tmp^.model := ParserShorter(s);
-            'L': tmp^.lux := fStI(ParserShorter(s));
-            'P': tmp^.price := fStI(ParserShorter(s));
+            'L': tmp^.lux := SrI(ParserShorter(s));
+            'P': tmp^.price := SrI(ParserShorter(s));
         end;
     end;
     close(f);
@@ -305,29 +358,51 @@ begin
     SearchByIdx := c^;
 end;
 
-function HaveCars(p: profile; c: cars): boolean;
+function HaveCar(p: profile; idx: integer): boolean; 
 var
     i: integer;
 begin
     for i := 1 to 5 do
     begin
-        if IsCar(c, p.c[i]) then
+        if p.c[i] = idx then
         begin
-            HaveCars := true;
+            HaveCar := true;
             exit;
         end;
     end;
-    HaveCars := false;
+    HaveCar := false;
 end;
 
-function PSumCars(p: profile; c: cars): integer;
+function HaveCarSlot(
+                    p: profile;
+                    idx: integer;
+                    var slot: integer)
+                                : boolean; { Returns car`s slot if true }
+var
+    i: integer;
+begin
+    for i := 1 to 5 do
+    begin
+        if p.c[i] = idx then
+        begin
+            HaveCarSlot := true;
+            slot := i;
+            exit;
+        end;
+    end;
+    HaveCarSlot := false;
+end;
+
+{ when add garade slots modife this }
+function PSumCars(p: profile; c: cars)
+                                : integer; { Profile`s Sum of Cars }
 var
     i, sum: integer;
 begin
     sum := 0;
     for i := 1 to 5 do
     begin
-        if IsCar(c, p.c[i]) then
+        if p.c[i] > 0 then
             sum += 1;
     end;
     PSumCars := sum;
@@ -346,6 +421,34 @@ begin
     SumCars := sum;
 end;
 
+function AnyEmptySlot(p: profile): integer;
+var
+    i: integer;
+begin
+    {todo to p.g.slots } 
+    for i := 1 to 5 do
+    begin
+        if p.c[i] = 0 then
+        begin
+            AnyEmptySlot := i;
+            exit;
+        end;
+    end;
+    AnyEmptySlot := 0;
+end;
+
+procedure EmptySlot(var p: profile; slot: integer);
+var
+    i: integer;
+begin
+    {todo to p.g.slots } 
+    for i := 1 to 5 do
+    begin
+        if i = slot then
+            p.c[i] := 0;
+    end;
+end;
+
 procedure DrawMainMenu(m: map);
 var
     x, y: integer;
@@ -355,11 +458,15 @@ begin
     x := (ScreenWidth - 10) div 2;
     y := (ScreenHeight - 5) div 2;
     GotoXY(x, y);
-    write('1. Profile');
+    write('1) Profile');
 
     y += 1;
     GotoXY(x, y);
-    write('2. Market');
+    write('2) Market');
+
+    y += 2;
+    GotoXY(x, y);
+    write('n) New game');
 
     y += 2;
     GotoXY(x, y);
@@ -370,7 +477,6 @@ procedure DrawProfileMenu(m: map; p: profile; c: cars);
 var
     i, x, y: integer;
     tmpcar: gamecar;
-    s: string;
 begin
     clrscr;
     ShowMap(m);
@@ -379,8 +485,7 @@ begin
     GotoXY(x, y);
     write('Profile');
 
-    str(p.m, s);
-    x := (ScreenWidth - (length('Money: ') + length(s))) div 2;
+    x := (ScreenWidth - (length('Money: ') + length(IrS(p.m)))) div 2;
     y += 3;
     GotoXY(x, y);
     write('Money: ', p.m);
@@ -393,7 +498,10 @@ begin
 
     x -= 3;
     y += 1;
-    if HaveCars(p, c) then
+
+    { if i`ll add garage, i need change Psumcars on p.g.slots }
+    { if you haven`t car in any slot, slot`ll be strikethrough }
+    if PSumCars(p, c) > 0 then 
     begin
         for i := 1 to PSumCars(p, c) do
         begin
@@ -417,9 +525,7 @@ begin
     DrawProfileMenu(m, p, c);
     repeat
         ch := ReadKey;
-    until ch in ['q', 'Q', #27];
-    if ch = #27 then
-        ByeScreen;
+    until ch in ['q', 'Q'];
 end;
 
 function FindProfileLux(p: profile): integer;
@@ -429,7 +535,7 @@ begin
         50001..100000: FindProfileLux := 2;
         100001..250000: FindProfileLux := 3;
         250001..500000: FindProfileLux := 4;
-        500001..1000000: FindProfileLux := 5;
+        500001..2000000000: FindProfileLux := 5; { Max lux }
     end;
 end;
 
@@ -444,39 +550,38 @@ begin
     end;
 end;
 
-function RandTradeList(p: profile; c: cars): gametradelist;
+function RandTradeList(p: profile; c: cars)
+                                    : tradelist; { Random trade list }
 var
-    i, sum, plux: integer;
-    status: shortint;
+    i, sum, status: integer; { Sum of cars }
     extra: longint;
-    tmp: gametradelist;
-    tmpcar: gamecar;
+    tl: tradelist;
 begin
-    plux := FindProfileLux(p);
     sum := SumCars(c);
     for i := 1 to 5 do
     begin
-        tmp[i].idx := i;
         repeat
-        tmp[i].car := random(sum)+1;
-        tmpcar := SearchByIdx(c, tmp[i].car);
-        until tmpcar.lux <= plux;
-        extra := FindLuxExtra(tmpcar.lux);
+            tl[i].idx := random(sum)+1;
+        until SearchByIdx(c, tl[i].idx).lux <= FindProfileLux(p);
+        extra := FindLuxExtra(SearchByIdx(c, tl[i].idx).lux);
         status := random(2);
         case status of
-            0: tmp[i].price := tmpcar.price + random(extra)+1;
-            1: tmp[i].price := tmpcar.price - random(extra)+1;
+            0: tl[i].price := SearchByIdx(c, tl[i].idx).price +
+                                                        random(extra)+1;
+            1: tl[i].price := SearchByIdx(c, tl[i].idx).price - 
+                                                        random(extra)+1;
         end;
-        tmp[i].price := tmp[i].price div 1000 * 1000;
+        tl[i].price := tl[i].price div 1000 * 1000;
     end;
-    RandTradeList := tmp;
+    RandTradeList := tl;
 end;
 
 procedure DrawTradeMenu(
                         m: map;
+                        p: profile;
                         c: cars;
-                        tradelist: gametradelist;
-                        status: shortint);
+                        tl: tradelist;
+                        choise: integer);
 var
     x, y, i: integer;
     tmpcar: gamecar;
@@ -492,46 +597,96 @@ begin
     GotoXY(x, y);
     write('Offers');
 
-    x -= 8;
+    x := (ScreenWidth - 27) div 2;
     y += 1;
     for i := 1 to 5 do
     begin
-        tmpcar := SearchByIdx(c, tradelist[i].car);
+        tmpcar := SearchByIdx(c, tl[i].idx);
         y += 1;
         GotoXY(x, y);
+        if HaveCar(p, tmpcar.idx) then  { + if have this car }
+            write(#8#8'+ ');
         write(
-            tradelist[i].idx, '. ',
-            tmpcar.brand, ' ',
-            tmpcar.model, ' ',
-            tradelist[i].price);
+             i, ') ',
+             tmpcar.brand,' ', tmpcar.model, ' ', tl[i].price);
     end;
 
-    x := (ScreenWidth - length('Enter car`s number')) div 2;
-    y += 2;
+    case choise of
+    0:
+    begin
+        x := (ScreenWidth - length('Enter car`s number')) div 2;
+        y += 2;
+        GotoXY(x, y);
+        write('Enter car`s number');
+    end;
+    else
+    begin
+        x := (ScreenWidth - 27) div 2;
+        y -= (5 - choise);
+        GotoXY(x, y);
+        write('* ');
+
+        x := (ScreenWidth - length('Press b/s buy/sell')) div 2;
+        y += (7 - choise); 
+        GotoXY(x, y);
+        write('Press b/s buy/sell');
+    end;
+
+    y += 1;
     GotoXY(x, y);
-    case status of 
-        0: write('Enter car`s number');
-        1: write('Press b/s buy/sell');
-    end;
 end;
-
-{ todo }
 
 procedure TradeMenu(m: map; var p: profile; c: cars);
 var
-    tradelist: gametradelist;
+    tl: tradelist;
+    ch: char;
+    choise, slot: integer;
 begin
-    tradelist := RandTradeList(p, c);
-    DrawTradeMenu(m, c, tradelist, 0);
-    
-    delay(1000);
+    tl := RandTradeList(p, c);
+    DrawTradeMenu(m, p, c, tl, 0);
+    repeat
+        ch := ReadKey;
+    until ch in ['1'..'5', 'q', 'Q'];
+    if ch in ['q', 'Q'] then
+        exit;
+    choise := ord(ch) - ord('0');
 
-    DrawTradeMenu(m, c, tradelist, 1);
-
-    delay(1000);
+    DrawTradeMenu(m, p, c, tl, choise);
+    repeat
+        ch := ReadKey;
+    until ch in ['b', 's', 'q', 'Q'];
+    case ch of
+        'b':
+        begin
+            if (AnyEmptySlot(p) <> 0)
+            and ((p.m - tl[choise].price) >= 0) then
+            begin
+                p.c[AnyEmptySlot(p)] := tl[choise].idx;
+                p.m -= tl[choise].price;
+                write('Success');
+            end
+            else if AnyEmptySlot(p) = 0 then
+                write('No empty slot')
+            else if (p.m - tl[choise].price) < 0 then
+                write('Not enough money');
+        end;
+        's':
+        begin
+            if HaveCarSlot(p, tl[choise].idx, slot) then
+            begin
+                EmptySlot(p, slot);
+                p.m += tl[choise].price;
+                write('Success');
+            end
+            else
+                write('You haven`t this car');
+        end;
+        'q', 'Q': exit;
+    end;
+    delay(1500);
+    RewriteProfile(p);
+    TradeMenu(m, p, c);
 end;
-
-{ /todo}
 
 var
     m: map;
@@ -540,22 +695,25 @@ var
     ch: char;
 begin
     clrscr;
+    randomize;
     ScreenCheck;
     IntroScreen;
-    randomize;
     Init(m, p, c);
     while true do
     begin
         DrawMainMenu(m);
         repeat
             ch := ReadKey;
-        until ch in ['1', '2', #27];
+        until ch in ['1', '2', 'n', 'N', 'q', 'Q'];
         case ch of
             '1': ProfileMenu(m, p, c);
             '2': TradeMenu(m, p, c);
-            #27: ByeScreen;
-            else
-                ErrScreen;
+            'n', 'N':
+            begin
+                CreateProfile;
+                ParseProfile(p);
+            end;
+            'q', 'Q': ByeScreen;
         end;
     end;
 end.
