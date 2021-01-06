@@ -604,32 +604,33 @@ begin
         tmpcar := SearchByIdx(c, tl[i].idx);
         y += 1;
         GotoXY(x, y);
-        if HaveCar(p, tmpcar.idx) then  { + if have this car }
+        if HaveCar(p, tmpcar.idx) then   { + if have this car }
             write(#8#8'+ ');
         write(
-             i, ') ',
-             tmpcar.brand,' ', tmpcar.model, ' ', tl[i].price);
+            i, ') ',
+            tmpcar.brand,' ', tmpcar.model, ' ', tl[i].price);
     end;
 
     case choise of
-    0:
-    begin
-        x := (ScreenWidth - length('Enter car`s number')) div 2;
-        y += 2;
-        GotoXY(x, y);
-        write('Enter car`s number');
-    end;
-    else
-    begin
-        x := (ScreenWidth - 27) div 2;
-        y -= (5 - choise);
-        GotoXY(x, y);
-        write('* ');
+        0:
+        begin
+            x := (ScreenWidth - length('Enter car`s number')) div 2;
+            y += 2;
+            GotoXY(x, y);
+            write('Enter car`s number');
+        end;
+        else
+        begin
+            x := (ScreenWidth - 27) div 2;
+            y -= (5 - choise);
+            GotoXY(x, y);
+            write('* ');
 
-        x := (ScreenWidth - length('Press b/s buy/sell')) div 2;
-        y += (7 - choise); 
-        GotoXY(x, y);
-        write('Press b/s buy/sell');
+            x := (ScreenWidth - length('Press b/s buy/sell')) div 2;
+            y += (7 - choise); 
+            GotoXY(x, y);
+            write('Press b/s buy/sell');
+        end;
     end;
 
     y += 1;
