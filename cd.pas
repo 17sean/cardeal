@@ -198,9 +198,9 @@ begin
     while count <> 7 do
     begin
         case count of
-            1: writeln(f, 'M:' + IrS(defmoney)); { Money }
-            2: writeln(f, IrS(count-1) + ':' + IrS(defcar)); { start car }
-            3..6: writeln(f, IrS(count-1) + ':' + IrS(0)); { no cars }
+            1: writeln(f, 'M:' + IrS(defmoney));
+            2: writeln(f, IrS(count-1) + ':' + IrS(defcar));
+            3..6: writeln(f, IrS(count-1) + ':' + IrS(0));
         end;
         count += 1;
     end;
@@ -218,9 +218,8 @@ begin
     while count <> 7 do
     begin
         case count of
-            1: writeln(f, 'M:' + IrS(p.m)); { Money }
-            2..6: writeln(f, IrS(count-1) +
-                                    ':' + IrS(p.c[count-1])); { Cars }
+            1: writeln(f, 'M:' + IrS(p.m)); 
+            2..6: writeln(f, IrS(count-1) + ':' + IrS(p.c[count-1]));
         end;
         count += 1;
     end;
@@ -241,8 +240,8 @@ begin
     begin
         readln(f, s);
         case s[1] of
-            'M': p.m := SrI(ParserShorter(s)); { Money }
-            '1'..'5': p.c[SrI(s[1])] := SrI(ParserShorter(s)); { Cars }
+            'M': p.m := SrI(ParserShorter(s));
+            '1'..'5': p.c[SrI(s[1])] := SrI(ParserShorter(s));
         end;
     end;
     close(f);
@@ -373,11 +372,7 @@ begin
     HaveCar := false;
 end;
 
-function HaveCarSlot(
-                    p: profile;
-                    idx: integer;
-                    var slot: integer)
-                                : boolean; { Returns car`s slot if true }
+function HaveCarSlot(p: profile; idx: integer; var slot: integer): boolean;
 var
     i: integer;
 begin
@@ -394,8 +389,7 @@ begin
 end;
 
 { when add garade slots modife this }
-function PSumCars(p: profile; c: cars)
-                                : integer; { Profile`s Sum of Cars }
+function PSumCars(p: profile; c: cars): integer; { Profile`s Sum of Cars }
 var
     i, sum: integer;
 begin
@@ -528,15 +522,24 @@ begin
     until ch in ['q', 'Q'];
 end;
 
-function FindProfileLux(p: profile): integer;
+function FindMaxLux(p: profile; c: cars): integer;
+var
+    i, lux: integer;
 begin
+    lux := 0;
     case p.m of
-        0..50000: FindProfileLux := 1;
-        50001..100000: FindProfileLux := 2;
-        100001..250000: FindProfileLux := 3;
-        250001..500000: FindProfileLux := 4;
-        500001..2000000000: FindProfileLux := 5; { Max lux }
+        0..50000: lux := 1;
+        50001..100000: lux := 2;
+        100001..250000: lux := 3;
+        250001..500000: lux := 4;
+        500001..2000000000: lux := 5;
     end;
+    for i := 1 to 5 do
+    begin
+        if (p.c[i] > 0) and (SearchByIdx(c, p.c[i]).lux > lux) then
+            lux := SearchByIdx(c, p.c[i]).lux;
+    end;
+    FindMaxLux := lux;
 end;
 
 function FindLuxExtra(lux: integer): longint;
@@ -550,19 +553,19 @@ begin
     end;
 end;
 
-function RandTradeList(p: profile; c: cars)
-                                    : tradelist; { Random trade list }
+function RandTradeList(p: profile; c: cars): tradelist;
 var
-    i, sum, status: integer; { Sum of cars }
+    i, sum, maxlux, status: integer; { Sum of cars }
     extra: longint;
     tl: tradelist;
 begin
     sum := SumCars(c);
+    maxlux := FindMaxLux(p, c);
     for i := 1 to 5 do
     begin
         repeat
             tl[i].idx := random(sum)+1;
-        until SearchByIdx(c, tl[i].idx).lux <= FindProfileLux(p);
+        until SearchByIdx(c, tl[i].idx).lux <= maxlux;
         extra := FindLuxExtra(SearchByIdx(c, tl[i].idx).lux);
         status := random(2);
         case status of
@@ -604,11 +607,11 @@ begin
         tmpcar := SearchByIdx(c, tl[i].idx);
         y += 1;
         GotoXY(x, y);
-        if HaveCar(p, tmpcar.idx) then   { + if have this car }
+        if HaveCar(p, tmpcar.idx) then
             write(#8#8'+ ');
         write(
-            i, ') ',
-            tmpcar.brand,' ', tmpcar.model, ' ', tl[i].price);
+              i, ') ',
+              tmpcar.brand,' ', tmpcar.model, ' ', tl[i].price);
     end;
 
     case choise of
