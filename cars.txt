@@ -10,14 +10,14 @@ I:2
 B:Lada
 M:2112
 L:1
-P:30000
+P:35000
 ;
 ~
 I:3
 B:Volkswagen
 M:Golf 3
 L:1
-P:40000
+P:45000
 ;
 ~
 I:4
@@ -31,7 +31,7 @@ I:5
 B:Renault
 M:Megane 1
 L:1
-P:45000
+P:50000
 ;
 ~
 I:6
@@ -52,7 +52,7 @@ I:8
 B:Chevrolet
 M:Lanos
 L:2
-P:59000
+P:60000
 ;
 ~
 I:9

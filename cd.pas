@@ -10,6 +10,7 @@ type
 
     profile = record
         m: longint; { money }
+        s: integer; { slots }
         c: array [1..5] of integer; { cars }
     end;
 
@@ -78,7 +79,7 @@ begin
     halt(0);
 end;
 
-function SrI(s: string): longint; { String returns Integer } 
+function SrI(s: string): longint; { String returns Integer }
 var
     i: integer;
     res: longint;
@@ -116,7 +117,7 @@ begin
     j := i;
     if i < 0 then
         i := -i;
-    while i <> 0 do 
+    while i <> 0 do
     begin
         new(tmp);
         if (i mod 10) <> 0 then
@@ -187,20 +188,22 @@ procedure CreateProfile();
 var
     f: text;
     defmoney: longint; { Default money }
-    defcar: integer;   { Default car }
+    defslots, defcar: integer;   { Default car }
     count: integer;
 begin
     defmoney := 15000;
+    defslots := 1;
     defcar := 1;
     assign(f, ProfileFileName);
     rewrite(f);
     count := 1;
-    while count <> 7 do
+    while count <> 8 do
     begin
         case count of
             1: writeln(f, 'M:' + IrS(defmoney));
-            2: writeln(f, IrS(count-1) + ':' + IrS(defcar));
-            3..6: writeln(f, IrS(count-1) + ':' + IrS(0));
+            2: writeln(f, 'S:' + IrS(defslots));
+            3: writeln(f, IrS(count-2) + ':' + IrS(defcar));
+            4..7: writeln(f, IrS(count-2) + ':' + IrS(0));
         end;
         count += 1;
     end;
@@ -215,11 +218,12 @@ begin
     assign(f, ProfileFileName);
     rewrite(f);
     count := 1;
-    while count <> 7 do
+    while count <> 8 do
     begin
         case count of
             1: writeln(f, 'M:' + IrS(p.m)); 
-            2..6: writeln(f, IrS(count-1) + ':' + IrS(p.c[count-1]));
+            2: writeln(f, 'S:' + IrS(p.s));
+            3..7: writeln(f, IrS(count-2) + ':' + IrS(p.c[count-2]));
         end;
         count += 1;
     end;
@@ -241,6 +245,7 @@ begin
         readln(f, s);
         case s[1] of
             'M': p.m := SrI(ParserShorter(s));
+            'S': p.s := SrI(ParserShorter(s));
             '1'..'5': p.c[SrI(s[1])] := SrI(ParserShorter(s));
         end;
     end;
@@ -324,7 +329,7 @@ begin
     end;
 end;
 
-function IsCar(c: cars; idx: integer): boolean; 
+function IsCar(c: cars; idx: integer): boolean;
 begin
     if idx = 0 then
     begin
@@ -357,11 +362,11 @@ begin
     SearchByIdx := c^;
 end;
 
-function HaveCar(p: profile; idx: integer): boolean; 
+function HaveCar(p: profile; idx: integer): boolean;
 var
     i: integer;
 begin
-    for i := 1 to 5 do
+    for i := 1 to p.s do
     begin
         if p.c[i] = idx then
         begin
@@ -376,7 +381,7 @@ function HaveCarSlot(p: profile; idx: integer; var slot: integer): boolean;
 var
     i: integer;
 begin
-    for i := 1 to 5 do
+    for i := 1 to p.s do
     begin
         if p.c[i] = idx then
         begin
@@ -388,13 +393,12 @@ begin
     HaveCarSlot := false;
 end;
 
-{ when add garade slots modife this }
 function PSumCars(p: profile; c: cars): integer; { Profile`s Sum of Cars }
 var
     i, sum: integer;
 begin
     sum := 0;
-    for i := 1 to 5 do
+    for i := 1 to p.s do
     begin
         if p.c[i] > 0 then
             sum += 1;
@@ -419,8 +423,7 @@ function AnyEmptySlot(p: profile): integer;
 var
     i: integer;
 begin
-    {todo to p.g.slots } 
-    for i := 1 to 5 do
+    for i := 1 to p.s do
     begin
         if p.c[i] = 0 then
         begin
@@ -432,15 +435,8 @@ begin
 end;
 
 procedure EmptySlot(var p: profile; slot: integer);
-var
-    i: integer;
 begin
-    {todo to p.g.slots } 
-    for i := 1 to 5 do
-    begin
-        if i = slot then
-            p.c[i] := 0;
-    end;
+    p.c[slot] := 0;
 end;
 
 procedure DrawMainMenu(m: map);
@@ -457,6 +453,10 @@ begin
     y += 1;
     GotoXY(x, y);
     write('2) Market');
+
+    y += 1;
+    GotoXY(x, y);
+    write('3) Shop');
 
     y += 2;
     GotoXY(x, y);
@@ -492,18 +492,17 @@ begin
 
     x -= 3;
     y += 1;
-
-    { if i`ll add garage, i need change Psumcars on p.g.slots }
-    { if you haven`t car in any slot, slot`ll be strikethrough }
-    if PSumCars(p, c) > 0 then 
+    for i := 1 to p.s do
     begin
-        for i := 1 to PSumCars(p, c) do
+        y += 1;
+        GotoXY(x, y);
+        if p.c[i] > 0 then
         begin
-            y += 1;
             tmpcar := SearchByIdx(c, p.c[i]);
-            GotoXY(x, y);
             write(tmpcar.brand, ' ', tmpcar.model);
-        end; 
+        end
+        else
+            write('-');
     end;
 
     x -= 1;
@@ -534,7 +533,7 @@ begin
         250001..500000: lux := 4;
         500001..2000000000: lux := 5;
     end;
-    for i := 1 to 5 do
+    for i := 1 to p.s do
     begin
         if (p.c[i] > 0) and (SearchByIdx(c, p.c[i]).lux > lux) then
             lux := SearchByIdx(c, p.c[i]).lux;
@@ -555,7 +554,7 @@ end;
 
 function RandTradeList(p: profile; c: cars): tradelist;
 var
-    i, sum, maxlux, status: integer; { Sum of cars }
+    i, sum, maxlux, status: integer; 
     extra: longint;
     tl: tradelist;
 begin
@@ -692,6 +691,71 @@ begin
     TradeMenu(m, p, c);
 end;
 
+function FindSlotPrice(p: profile): longint;
+begin
+    case p.s of
+        1: FindSlotPrice := 50000;
+        2: FindSlotPrice := 150000;
+        3: FindSlotPrice := 350000;
+        4: FindSlotPrice := 1000000;
+    end;
+end;
+
+procedure DrawShopMenu(m: map; p: profile; price: longint);
+var
+    x, y: integer;
+begin
+    clrscr;
+    ShowMap(m);
+    x := (ScreenWidth - 4) div 2;
+    y := (ScreenHeight - 8) div 2;
+    GotoXY(x, y);
+    write('Shop');
+
+    y += 3;
+    if p.s <> 5 then
+    begin
+        x -= 15 - length(IrS(price));
+        GotoXY(x, y);
+        write('1) Buy new slot ', price)
+    end
+    else
+    begin
+        x := (ScreenWidth - length('You bought all slots')) div 2;
+        GotoXY(x, y);
+        write('You bought all slots');
+    end;
+
+    x := (ScreenWidth - length('press q to quit')) div 2;
+    y += 4;
+    GotoXY(x, y);
+    write('press q to quit');
+end;
+
+procedure ShopMenu(m: map; var p: profile);
+var
+    ch: char;
+    price: longint;
+begin
+    price := FindSlotPrice(p);
+    DrawShopMenu(m, p, price);
+    repeat
+        ch := ReadKey;
+    until ch in ['1', 'q', 'Q'];
+    case ch of
+        '1':
+        begin
+            if (p.s <> 5) and ((p.m - price) > 0) then
+            begin
+                p.s += 1;
+                p.m -= price;
+                RewriteProfile(p);
+            end;
+        end;
+        'q', 'Q': exit;
+    end;
+end;
+
 var
     m: map;
     p: profile;
@@ -708,10 +772,11 @@ begin
         DrawMainMenu(m);
         repeat
             ch := ReadKey;
-        until ch in ['1', '2', 'n', 'N', 'q', 'Q'];
+        until ch in ['1', '2', '3', 'n', 'N', 'q', 'Q'];
         case ch of
             '1': ProfileMenu(m, p, c);
             '2': TradeMenu(m, p, c);
+            '3': ShopMenu(m, p);
             'n', 'N':
             begin
                 CreateProfile;
