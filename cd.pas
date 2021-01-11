@@ -28,6 +28,8 @@ type
     end;
     tradelist = array [1..5] of tradelistelement;
 
+    color = (red, blue);
+
 procedure ScreenCheck();
 begin
     if (ScreenWidth < 45) or (ScreenHeight < 18) then
@@ -79,7 +81,7 @@ begin
     halt(0);
 end;
 
-function SrI(s: string): longint; { String returns Integer }
+function SrI(s: string): longint; { String returns integer }
 var
     i: integer;
     res: longint;
@@ -96,13 +98,13 @@ end;
 
 function IrS(i: longint): string; { Integer returns string }
 type
-    pIntEl = ^IntEl;
-    IntEl = record
+    pCharEl = ^CharEl;
+    CharEl = record
         data: char;
-        next: pIntEl;
+        next: pCharEl;
     end;
 var
-    p, tmp: pIntEl;
+    p, tmp: pCharEl;
     s: string;
     j: longint;
 begin
@@ -237,7 +239,6 @@ var
 begin
     if not DFE(ProfileFileName) then
         CreateProfile;
-
     assign(f, ProfileFileName);
     reset(f);
     while not EOF(f) do
@@ -274,7 +275,6 @@ begin
                 tmp^.next := c;
             end;
             ';': c := tmp;
-
             'I': tmp^.idx := SrI(ParserShorter(s));
             'B': tmp^.brand := ParserShorter(s);
             'M': tmp^.model := ParserShorter(s);
@@ -458,6 +458,10 @@ begin
     GotoXY(x, y);
     write('3) Shop');
 
+    y += 1;
+    GotoXY(x, y);
+    write('4) Casino');
+
     y += 2;
     GotoXY(x, y);
     write('n) New game');
@@ -483,7 +487,6 @@ begin
     y += 3;
     GotoXY(x, y);
     write('Money: ', p.m);
-    
 
     x := (ScreenWidth - 7) div 2;
     y += 2;
@@ -653,7 +656,6 @@ begin
     if ch in ['q', 'Q'] then
         exit;
     choise := ord(ch) - ord('0');
-
     DrawTradeMenu(m, p, c, tl, choise);
     repeat
         ch := ReadKey;
@@ -708,7 +710,7 @@ begin
     clrscr;
     ShowMap(m);
     x := (ScreenWidth - 4) div 2;
-    y := (ScreenHeight - 8) div 2;
+    y := (ScreenHeight - 14) div 2;
     GotoXY(x, y);
     write('Shop');
 
@@ -756,6 +758,140 @@ begin
     end;
 end;
 
+function RandCasino(c: color): boolean;
+var
+    i: integer;
+begin
+    i := random(2);
+    if ((c = red) and (i=1)) or
+       ((c = blue) and (i=2)) then
+        RandCasino := true
+    else
+        RandCasino := false;
+end;
+
+procedure DrawCasinoMenu(m: map; p: profile; status: integer);
+var
+    x, y: integer;
+begin
+    clrscr;
+    ShowMap(m);
+    x := (ScreenWidth - 6) div 2;
+    y := (ScreenHeight - 14) div 2;
+    GotoXY(x, y);
+    write('Casino');
+
+    x := (ScreenWidth - length('Money: ') - length(IrS(p.m))) div 2;
+    y += 3;
+    GotoXY(x, y);
+    write('Money: ', p.m);
+
+    case status of
+        0:
+        begin
+            x := (ScreenWidth - length('R) Red')-4) div 2;
+            y += 3;
+            GotoXY(x, y);
+            write('R) Red');
+
+            y += 1;
+            GotoXY(x, y);
+            write('B) Blue');
+
+            x := (ScreenWidth - length('Choose:')) div 2;
+            y += 3;
+            GotoXY(x, y);
+            write('Choose:');
+        end;
+        1:
+        begin
+            x := (ScreenWidth - length('5) 1000000')) div 2;
+            y += 3;
+            GotoXY(x, y);
+            write('1) 50000');
+
+            y += 1;
+            GotoXY(x, y);
+            write('2) 100000');
+
+            y += 1;
+            GotoXY(x, y);
+            write('3) 250000');
+
+            y += 1;
+            GotoXY(x, y);
+            write('4) 500000');
+
+            y += 1;
+            GotoXY(x, y);
+            write('5) 1000000');
+
+            x := (ScreenWidth - length('Choose:')) div 2;
+            y += 2;
+            GotoXY(x, y);
+            write('Choose:');
+        end;
+        2:
+        begin
+            GotoXY((ScreenWidth - 8) div 2, ScreenHeight div 2);
+            write('You win!');
+        end;
+        3:
+        begin
+            GotoXY((ScreenWidth - 9) div 2, ScreenHeight div 2);
+            write('You lose.');
+        end;
+    end;
+end;
+
+procedure CasinoMenu(m: map; var p: profile);
+var
+    ch: char;
+    c: color;
+    bet: longint;
+begin
+    DrawCasinoMenu(m, p, 0);
+    repeat
+        ch := ReadKey;
+    until ch in ['r', 'R', 'b', 'B', 'q', 'Q'];
+    case ch of
+    'r', 'R': c := red;
+    'b', 'B': c := blue;
+    'q', 'Q': exit;
+    end;
+    DrawCasinoMenu(m, p, 1);
+    repeat
+        ch := ReadKey;
+    until ch in ['1', '2', '3', '4', '5', 'q', 'Q'];
+    case ch of
+    '1': bet := 50000;
+    '2': bet := 100000;
+    '3': bet := 250000;
+    '4': bet := 500000;
+    '5': bet := 1000000;
+    'q', 'Q': exit;
+    end;
+    if bet > p.m then
+    begin
+        write('Not enough money');
+        delay(1000);
+        exit;
+    end;
+    if RandCasino(c) then
+    begin
+        p.m += bet;
+        DrawCasinoMenu(m, p, 2);
+    end
+    else
+    begin
+        p.m -= bet;
+        DrawCasinoMenu(m, p, 3);
+    end;
+    delay(1000);
+    RewriteProfile(p);
+    CasinoMenu(m, p);
+end;
+
 var
     m: map;
     p: profile;
@@ -772,11 +908,12 @@ begin
         DrawMainMenu(m);
         repeat
             ch := ReadKey;
-        until ch in ['1', '2', '3', 'n', 'N', 'q', 'Q'];
+        until ch in ['1', '2', '3', '4', 'n', 'N', 'q', 'Q'];
         case ch of
             '1': ProfileMenu(m, p, c);
             '2': TradeMenu(m, p, c);
             '3': ShopMenu(m, p);
+            '4': CasinoMenu(m, p);
             'n', 'N':
             begin
                 CreateProfile;
