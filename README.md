@@ -1,15 +1,17 @@
 # Car Dealer v1.5
 
 ## Install
-'''bash
-fpc cd
+```bash
+git clone https://github.com/17sean/cardeal.git
+cd cardeal
+fpc cd.pas
 ./cd
-'''
+```
 
-## Added
+### Added
 - Casino
 
-## Plans
+### Plans
 - [ ] Add more cars
 - [ ] Add events 
 - [ ] Divide code
