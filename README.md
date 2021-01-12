@@ -9,9 +9,11 @@ fpc cd.pas
 ```
 
 ### Added
-- Casino
+- Events 
 
 ### Plans
+- [X] Add events 
+- [ ] Add more events
 - [ ] Add more cars
-- [ ] Add events 
+- [ ] Change prices on cars
 - [ ] Divide code

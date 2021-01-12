@@ -1,0 +1,9 @@
+~
+I:1
+B:Lada
+O:-
+D:10000
+P:0
+S:Oleg opened new Lada distribution company
+M:All Lada have fallen in price
+;

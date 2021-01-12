@@ -3,6 +3,7 @@ uses crt;
 const
     ProfileFileName = 'profile.txt';
     CarsFileName = 'cars.txt';
+    EventsFileName = 'events.txt';
 type
     map = record
         w, h, x, y: integer;
@@ -16,10 +17,24 @@ type
 
     cars = ^gamecar;
     gamecar = record
-        idx, lux: integer;
+        idx: integer;
+        brand: string;
+        model: string;
+        lux: integer;
         price: longint;
-        brand, model: string;
         next: cars;
+    end;
+
+    events = ^gameevent;
+    gameevent = record
+        idx: integer;
+        brand: string;
+        oper: char;
+        diff: longint;
+        per: integer; { percentage }
+        sit: string; { situation }
+        msg: string; { message } 
+        next: events;
     end;
 
     tradelistelement = record
@@ -285,7 +300,41 @@ begin
     close(f);
 end;
 
-procedure Init(var m: map; var p: profile; var c: cars);
+procedure ParseEvents(var e: events);
+var
+    f: text;
+    s: string;
+    tmp: events;
+begin
+    if not DFE(EventsFileName) then
+        ErrScreen;
+
+    e := nil;
+    assign(f, EventsFileName);
+    reset(f);
+    while not EOF(f) do
+    begin
+        readln(f, s);
+        case s[1] of
+            '~':
+            begin
+                new(tmp);
+                tmp^.next := e;
+            end;
+            ';': e := tmp;
+            'I': tmp^.idx := SrI(ParserShorter(s));
+            'B': tmp^.brand := ParserShorter(s);
+            'O': tmp^.oper := ParserShorter(s)[1];
+            'D': tmp^.diff := SrI(ParserShorter(s));
+            'P': tmp^.per := SrI(ParserShorter(s));
+            'S': tmp^.sit := ParserShorter(s);
+            'M': tmp^.msg := ParserShorter(s);
+        end;
+    end;
+    close(f);
+end;
+
+procedure Init(var m: map; var p: profile; var c: cars; var e: events);
 begin
     m.h := 20;
     m.w := 50;
@@ -293,6 +342,7 @@ begin
     m.y := (ScreenHeight - m.h) div 2;
     ParseProfile(p);
     ParseCars(c);
+    ParseEvents(e);
 end;
 
 procedure ShowMap(m: map);
@@ -329,7 +379,7 @@ begin
     end;
 end;
 
-function IsCar(c: cars; idx: integer): boolean;
+function IsCar(c: cars; idx: integer; var car: gamecar): boolean;
 begin
     if idx = 0 then
     begin
@@ -342,6 +392,7 @@ begin
         if c^.idx = idx then
         begin
             IsCar := true;
+            car := c^;
             exit;
         end;
         c := c^.next;
@@ -349,17 +400,14 @@ begin
     IsCar := false;
 end;
 
-function SearchByIdx(c: cars; idx: integer): gamecar;
+function SearchCarByIdx(c: cars; idx: integer): gamecar;
+var
+    car: gamecar;
 begin
-    if not IsCar(c, idx) then
-    begin
-        SearchByIdx := c^;
-        exit;
-    end;
-    
-    while c^.idx <> idx do
-        c := c^.next;
-    SearchByIdx := c^;
+    if IsCar(c, idx, car) then
+        SearchCarByIdx := car
+    else
+        SearchCarByIdx := c^;
 end;
 
 function HaveCar(p: profile; idx: integer): boolean;
@@ -417,6 +465,19 @@ begin
         c := c^.next;
     end;
     SumCars := sum;
+end;
+
+function SumEvents(e: events): integer;
+var
+    sum: integer;
+begin
+    sum := 0;
+    while e <> nil do
+    begin
+        sum += 1;
+        e := e^.next;
+    end;
+    SumEvents := sum;
 end;
 
 function AnyEmptySlot(p: profile): integer;
@@ -501,7 +562,7 @@ begin
         GotoXY(x, y);
         if p.c[i] > 0 then
         begin
-            tmpcar := SearchByIdx(c, p.c[i]);
+            tmpcar := SearchCarByIdx(c, p.c[i]);
             write(tmpcar.brand, ' ', tmpcar.model);
         end
         else
@@ -538,8 +599,8 @@ begin
     end;
     for i := 1 to p.s do
     begin
-        if (p.c[i] > 0) and (SearchByIdx(c, p.c[i]).lux > lux) then
-            lux := SearchByIdx(c, p.c[i]).lux;
+        if (p.c[i] > 0) and (SearchCarByIdx(c, p.c[i]).lux > lux) then
+            lux := SearchCarByIdx(c, p.c[i]).lux;
     end;
     FindMaxLux := lux;
 end;
@@ -555,9 +616,10 @@ begin
     end;
 end;
 
-function RandTradeList(p: profile; c: cars): tradelist;
+function RandTradeList(p: profile; c: cars; event: gameevent): tradelist;
 var
     i, sum, maxlux, status: integer; 
+    car: gamecar;
     extra: longint;
     tl: tradelist;
 begin
@@ -567,24 +629,121 @@ begin
     begin
         repeat
             tl[i].idx := random(sum)+1;
-        until SearchByIdx(c, tl[i].idx).lux <= maxlux;
-        extra := FindLuxExtra(SearchByIdx(c, tl[i].idx).lux);
-        status := random(2);
-        case status of
-            0: tl[i].price := SearchByIdx(c, tl[i].idx).price +
-                                                        random(extra)+1;
-            1: tl[i].price := SearchByIdx(c, tl[i].idx).price - 
-                                                        random(extra)+1;
+        until SearchCarByIdx(c, tl[i].idx).lux <= maxlux;
+        car := SearchCarByIdx(c, tl[i].idx);
+        if (event.idx <> 0) and
+           ((event.brand = car.brand) or
+           (event.brand = 'ALL')) then
+        begin
+            case event.oper of
+                '+': tl[i].price := car.price + event.diff;
+                '-': tl[i].price := car.price - event.diff;
+            end;
+        end
+        else
+        begin
+            extra := FindLuxExtra(car.lux);
+            status := random(2);
+            case status of
+                0: tl[i].price := car.price + random(extra)+1;
+                1: tl[i].price := car.price - random(extra)+1;
+            end;
         end;
         tl[i].price := tl[i].price div 1000 * 1000;
     end;
     RandTradeList := tl;
 end;
 
+function IsEvent(e: events; idx: integer; var event: gameevent): boolean;
+begin
+    while e <> nil do
+    begin
+        if e^.idx = idx then
+        begin
+            IsEvent := true;
+            event := e^;
+            exit;
+        end;
+        e := e^.next;
+    end;
+    IsEvent := false;
+end;
+
+function SearchEventByIdx(e: events; idx: integer): gameevent;
+var
+    event: gameevent;
+begin
+    if IsEvent(e, idx, event) then
+        SearchEventByIdx := event
+    else
+        SearchEventByIdx := e^;
+end;
+
+function PassEvent(event: gameevent): boolean;
+type
+    pChanceList = ^ChanceList;
+    ChanceList = record
+        data: boolean;
+        next: pChanceList;
+    end;
+var
+    i, count, rand: integer;
+    cl, tmp: pChanceList; { Chance list }
+begin
+    if event.per = 0 then
+    begin
+        PassEvent := false;
+        exit;
+    end;
+
+    cl := nil;
+    count := 100 div event.per;
+    for i := 1 to count do
+    begin
+        new(tmp);
+        tmp^.next := cl;
+        if i = 1 then
+            tmp^.data := true
+        else
+            tmp^.data := false;
+        cl := tmp;
+    end;
+    rand := random(count)+1;
+    i := 1;
+    while i <> rand do
+    begin
+        tmp := tmp^.next;
+        i += 1;
+    end;
+    if tmp^.data = true then
+        PassEvent := true
+    else
+        PassEvent := false;
+    while cl <> nil do
+    begin
+        tmp := cl;
+        cl := cl^.next;
+        dispose(tmp);
+    end;
+end;
+
+function RandEvent(e: events): gameevent;
+var
+    res, noevent: gameevent;
+begin
+    noevent.idx := 0;
+    res := SearchEventByIdx(e, random(SumEvents(e))+1);
+    if PassEvent(res) then
+        RandEvent := res
+    else
+        RandEvent := noevent;
+end;
+
 procedure DrawTradeMenu(
                         m: map;
                         p: profile;
                         c: cars;
+                        event: gameevent;
                         tl: tradelist;
                         choise: integer);
 var
@@ -592,6 +751,19 @@ var
     tmpcar: gamecar;
 begin
     clrscr;
+    if (choise = 0) and (event.idx <> 0) then
+    begin
+        x := (ScreenWidth - length(event.sit)) div 2;
+        y := (ScreenHeight - 2) div 2;
+        GotoXY(x, y);
+        write(event.sit);
+        x := (ScreenWidth - length(event.msg)) div 2;
+        y += 1;
+        GotoXY(x, y);
+        write(event.msg);
+        delay(2000);
+        clrscr;
+    end;
     ShowMap(m);
     x := (ScreenWidth - length('Market')) div 2;
     y := (ScreenHeight - 14) div 2;
@@ -606,7 +778,7 @@ begin
     y += 1;
     for i := 1 to 5 do
     begin
-        tmpcar := SearchByIdx(c, tl[i].idx);
+        tmpcar := SearchCarByIdx(c, tl[i].idx);
         y += 1;
         GotoXY(x, y);
         if HaveCar(p, tmpcar.idx) then
@@ -642,21 +814,23 @@ begin
     GotoXY(x, y);
 end;
 
-procedure TradeMenu(m: map; var p: profile; c: cars);
+procedure TradeMenu(m: map; var p: profile; c: cars; e: events);
 var
     tl: tradelist;
     ch: char;
     choise, slot: integer;
+    event: gameevent;
 begin
-    tl := RandTradeList(p, c);
-    DrawTradeMenu(m, p, c, tl, 0);
+    event := RandEvent(e);
+    tl := RandTradeList(p, c, event);
+    DrawTradeMenu(m, p, c, event, tl, 0);
     repeat
         ch := ReadKey;
     until ch in ['1'..'5', 'q', 'Q'];
     if ch in ['q', 'Q'] then
         exit;
     choise := ord(ch) - ord('0');
-    DrawTradeMenu(m, p, c, tl, choise);
+    DrawTradeMenu(m, p, c, event, tl, choise);
     repeat
         ch := ReadKey;
     until ch in ['b', 's', 'q', 'Q'];
@@ -690,7 +864,7 @@ begin
     end;
     delay(1500);
     RewriteProfile(p);
-    TradeMenu(m, p, c);
+    TradeMenu(m, p, c, e);
 end;
 
 function FindSlotPrice(p: profile): longint;
@@ -717,7 +891,7 @@ begin
     y += 3;
     if p.s <> 5 then
     begin
-        x -= 15 - length(IrS(price));
+        x := (ScreenWidth - 16 - length(IrS(price))) div 2;
         GotoXY(x, y);
         write('1) Buy new slot ', price)
     end
@@ -830,6 +1004,9 @@ begin
             y += 2;
             GotoXY(x, y);
             write('Choose:');
+            x := (ScreenWidth - length('Not enough money')) div 2;
+            y += 1;
+            GotoXY(x, y);
         end;
         2:
         begin
@@ -896,13 +1073,14 @@ var
     m: map;
     p: profile;
     c: cars;
+    e: events;
     ch: char;
 begin
     clrscr;
     randomize;
     ScreenCheck;
     IntroScreen;
-    Init(m, p, c);
+    Init(m, p, c, e);
     while true do
     begin
         DrawMainMenu(m);
@@ -911,7 +1089,7 @@ begin
         until ch in ['1', '2', '3', '4', 'n', 'N', 'q', 'Q'];
         case ch of
             '1': ProfileMenu(m, p, c);
-            '2': TradeMenu(m, p, c);
+            '2': TradeMenu(m, p, c, e);
             '3': ShopMenu(m, p);
             '4': CasinoMenu(m, p);
             'n', 'N':
