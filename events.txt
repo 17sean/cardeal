@@ -3,7 +3,25 @@ I:1
 B:Lada
 O:-
 D:10000
-P:0
+P:5
 S:Oleg opened new Lada distribution company
-M:All Lada have fallen in price
+M:Lada have fallen in price
+;
+~
+I:2
+B:BMW
+O:-
+D:50000
+P:10
+S:New BMW factories have opened
+M:BMW have fallen in price
+;
+~
+I:3
+B:Volkswagen
+O:+
+D:20000
+P:8
+S:Volkswagen`s factories have closed
+M:Volkswagen have increased in price
 ;
