@@ -12,5 +12,5 @@ fpc cd.pas
 - More events
 
 ### Plans
-- [ ] Add more events
+- [X] Add more events
 - [ ] Divide code
