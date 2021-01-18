@@ -21,7 +21,34 @@ I:3
 B:Volkswagen
 O:+
 D:20000
-P:8
-S:Volkswagen`s factories have closed
+P:10
+S:Volkswagen factories have closed
 M:Volkswagen have increased in price
+;
+~
+I:4
+B:Audi
+O:-
+D:50000
+P:10
+S:New Audi factories have opened
+M:Audi have fallen in price
+;
+~
+I:5
+B:Mercedes-Benz
+O:+
+D:150000
+P:10
+S:Mercedes factories have closed
+M:Mercedes-Benz have increased in price
+;
+~
+I:6
+B:Mercedes-Benz
+O:-
+D:200000
+P:10
+S:New Mercedes factories have opened
+M:Mercedes-Benz have fallen in price
 ;
