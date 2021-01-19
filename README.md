@@ -1,4 +1,4 @@
-# Car Dealer v1.5.3
+# Car Dealer v1.6-ALPHA
 
 ## Install
 ```bash
@@ -9,8 +9,4 @@ fpc cd.pas
 ```
 
 ### Added
-- More events
-
-### Plans
-- [X] Add more events
-- [ ] Divide code
+- Divided code
