@@ -4,11 +4,6 @@ uses datstrc;
 
 procedure Init(var m: map; var p: profile; var c: cars; var e: events);
 
-procedure ScreenCheck();
-procedure ErrScreen();
-procedure ByeScreen();
-procedure ShowMap(m: map);
-
 procedure CreateProfile();
 procedure RewriteProfile(p: profile);
 procedure ParseProfile(var p: profile);
@@ -47,68 +42,16 @@ const
     CarsFileName = 'data/cars.txt';
     EventsFileName = 'data/events.txt';
 
-procedure ScreenCheck();
+procedure Init(var m: map; var p: profile; var c: cars; var e: events);
 begin
-    if (ScreenWidth < 45) or (ScreenHeight < 18) then
-    begin
-        GotoXY((ScreenWidth - 25) div 2, (ScreenHeight-1) div 2);
-        write('Resize terminal to 45x18');
-        delay(5000);
-        clrscr;
-        halt(0);
-    end;
-end;
-
-procedure ErrScreen();
-begin
-    clrscr;
-    GotoXY(
-        (ScreenWidth - length('Error. Exiting...')) div 2,
-        ScreenHeight div 2);
-    write(ErrOutput, 'Error. Exiting...');
-    delay(3000);
-    clrscr;
-    halt(1);
-end;
-
-procedure ByeScreen();
-begin
-    clrscr;
-    halt(0);
-end;
-
-procedure ShowMap(m: map);
-var
-    i, j: integer;
-begin
-    for i := 1 to m.h do
-    begin
-    GotoXY(m.x, m.y);
-        write('|'); { default }
-        for j := 2 to m.w-1 do
-            write(' ');
-        write('|');
-
-        if i = 1 then { top }
-        begin
-            GotoXY(m.x, m.y);
-            write(' ');
-            for j := 2 to m.w-1 do
-                write('_');
-            write(' ');
-        end;
-
-        if i = m.h then { bottom }
-        begin 
-            GotoXY(m.x, m.y);
-            write(' ');
-            for j := 2 to m.w-1 do
-                write('-');
-            write(' '); 
-        end;
-
-        m.y += 1;
-    end;
+    randomize;
+    m.h := 20;
+    m.w := 50;
+    m.x := (ScreenWidth - m.w) div 2;
+    m.y := (ScreenHeight - m.h) div 2;
+    ParseProfile(p);
+    ParseCars(c);
+    ParseEvents(e);
 end;
 
 procedure CreateProfile();
@@ -177,21 +120,6 @@ begin
     end;
     close(f);
 end;
-
-procedure Init(var m: map; var p: profile; var c: cars; var e: events);
-begin
-    ScreenCheck;
-    randomize;
-    m.h := 20;
-    m.w := 50;
-    m.x := (ScreenWidth - m.w) div 2;
-    m.y := (ScreenHeight - m.h) div 2;
-    ParseProfile(p);
-    ParseCars(c);
-    ParseEvents(e);
-end;
-
-
 
 function PSumCars(p: profile; c: cars): integer; { Profile`s Sum of Cars }
 var

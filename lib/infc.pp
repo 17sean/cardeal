@@ -2,6 +2,10 @@ unit infc;
 interface
 uses datstrc;
 
+procedure ErrScreen();
+procedure ByeScreen();
+procedure ShowMap(m: map);
+
 procedure DrawMainMenu(m: map);
 procedure DrawProfileMenu(m: map; p: profile; c: cars);
 procedure DrawTradeMenu(m: map; p: profile; c: cars; event: gameevent;
@@ -11,6 +15,58 @@ procedure DrawCasinoMenu(m: map; p: profile; status: integer);
 
 implementation
 uses crt, slib, engine;
+
+procedure ErrScreen();
+begin
+    clrscr;
+    GotoXY(
+        (ScreenWidth - length('Error. Exiting...')) div 2,
+        ScreenHeight div 2);
+    write(ErrOutput, 'Error. Exiting...');
+    delay(3000);
+    clrscr;
+    halt(1);
+end;
+
+procedure ByeScreen();
+begin
+    clrscr;
+    halt(0);
+end;
+
+procedure ShowMap(m: map);
+var
+    i, j: integer;
+begin
+    for i := 1 to m.h do
+    begin
+    GotoXY(m.x, m.y);
+        write('|'); { default }
+        for j := 2 to m.w-1 do
+            write(' ');
+        write('|');
+
+        if i = 1 then { top }
+        begin
+            GotoXY(m.x, m.y);
+            write(' ');
+            for j := 2 to m.w-1 do
+                write('_');
+            write(' ');
+        end;
+
+        if i = m.h then { bottom }
+        begin 
+            GotoXY(m.x, m.y);
+            write(' ');
+            for j := 2 to m.w-1 do
+                write('-');
+            write(' '); 
+        end;
+
+        m.y += 1;
+    end;
+end;
 
 procedure DrawMainMenu(m: map);
 var

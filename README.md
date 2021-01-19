@@ -1,4 +1,4 @@
-# Car Dealer v1.6-ALPHA
+# Car Dealer v1.6
 
 ## Install
 ```bash
